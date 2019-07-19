@@ -99,6 +99,8 @@ func resourceAwsCognitoIdentityPool() *schema.Resource {
 					ValidateFunc: validateCognitoSupportedLoginProviders,
 				},
 			},
+
+			"tags": tagsSchema(),
 		},
 	}
 }
@@ -130,6 +132,10 @@ func resourceAwsCognitoIdentityPoolCreate(d *schema.ResourceData, meta interface
 
 	if v, ok := d.GetOk("openid_connect_provider_arns"); ok {
 		params.OpenIdConnectProviderARNs = expandStringList(v.([]interface{}))
+	}
+
+	if v, ok := d.GetOk("tags"); ok {
+		params.IdentityPoolTags = tagsFromMapGeneric(v.(map[string]interface{}))
 	}
 
 	entity, err := conn.CreateIdentityPool(params)
@@ -168,6 +174,7 @@ func resourceAwsCognitoIdentityPoolRead(d *schema.ResourceData, meta interface{}
 	d.Set("identity_pool_name", ip.IdentityPoolName)
 	d.Set("allow_unauthenticated_identities", ip.AllowUnauthenticatedIdentities)
 	d.Set("developer_provider_name", ip.DeveloperProviderName)
+	d.Set("tags", tagsToMapGeneric(ip.IdentityPoolTags))
 
 	if err := d.Set("cognito_identity_providers", flattenCognitoIdentityProviders(ip.CognitoIdentityProviders)); err != nil {
 		return fmt.Errorf("Error setting cognito_identity_providers error: %#v", err)
@@ -217,6 +224,12 @@ func resourceAwsCognitoIdentityPoolUpdate(d *schema.ResourceData, meta interface
 	if v, ok := d.GetOk("saml_provider_arns"); ok {
 		params.SamlProviderARNs = expandStringList(v.([]interface{}))
 	}
+
+	if v, ok := d.GetOk("tags"); ok {
+		params.IdentityPoolTags = tagsFromMapGeneric(v.(map[string]interface{}))
+	}
+
+	log.Printf("[DEBUG] Updating Cognito Identity Pool: %s", params)
 
 	_, err := conn.UpdateIdentityPool(params)
 	if err != nil {
